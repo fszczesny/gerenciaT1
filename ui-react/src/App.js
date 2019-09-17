@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from "react";
-import logo from "./logo.svg";
 import "./App.css";
 import axios from "axios";
-import { timeout } from "q";
-import { TextField, MenuItem, Button, Paper } from "@material-ui/core";
+import {
+  TextField,
+  MenuItem,
+  Button,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListSubheader,
+  Divider
+} from "@material-ui/core";
 import { Form, Field } from "react-final-form";
 
 function App() {
@@ -57,7 +65,7 @@ function App() {
   }, []);
 
   return (
-    <div /*onClick={getDate}*/ className="App">
+    <div className="App">
       <div className="entrada-dados-card">
         <Form
           initialValues={{
@@ -126,8 +134,8 @@ function App() {
                     {...meta}
                     {...input}
                   >
-                    <MenuItem key={"DM5"} value={"DM5"}>
-                      DM5
+                    <MenuItem key={"MD5"} value={"MD5"}>
+                      MD5
                     </MenuItem>
                     <MenuItem key={"SHA"} value={"SHA"}>
                       SHA
@@ -235,6 +243,7 @@ function App() {
                 onClick={handleSubmit}
                 variant="outlined"
                 className="button"
+                color="primary"
               >
                 Update
               </Button>
@@ -277,11 +286,23 @@ function App() {
           </div>
         </div>
         <div className="cell">
-          <div className="cell-heade"> Interfaces </div>
-          <Paper className="cell-body">
-            {interfaces.map(interf => (
-              <div className="little-cell">{`${interf.name}: ${interf.state}`}</div>
-            ))}
+          <Paper>
+            <List
+              subheader={
+                <ListSubheader component="div" id="nested-list-subheader">
+                  Interfaces
+                </ListSubheader>
+              }
+            >
+              {interfaces.map(interf => (
+                <>
+                  <Divider />
+                  <ListItem>
+                    <ListItemText primary={`${interf.name}: ${interf.state}`} />
+                  </ListItem>
+                </>
+              ))}
+            </List>
           </Paper>
         </div>
       </div>

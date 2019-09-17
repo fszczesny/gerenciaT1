@@ -1,5 +1,5 @@
 from array import *
-from easysnmp import Session
+# from easysnmp import Session
 import time
 from flask import Flask, request
 from flask_restful import Resource, Api
@@ -8,10 +8,12 @@ import threading
 
 # Cria sessao SNMP conforme os dados passados de parametro
 def createSessionV3(hostname, commnity, securityUsername, authProtocol, authPassword, sucurityLevel, privacyProtocol, privacyPass):
+    from easysnmp import Session
     session = Session(hostname=hostname, community=commnity, security_username=securityUsername, auth_protocol=authProtocol, auth_password=authPassword, security_level=sucurityLevel, privacy_protocol = privacyProtocol, privacy_password = privacyPass, version=3)
     return session;
 
 def createSessionV2(hostname, commnity):
+    from easysnmp import Session
     session = Session(hostname=hostname, community=commnity, version=2)
     return session;
 
@@ -110,14 +112,15 @@ interfaces = []
 def updateVariables():
 
     while (True):
-        try:
-            lock.acquire()
-            global inTraffic
-            global outTraffic
-            global inErrors
-            global outErrors
-            global interfaces
-            global session
+        lock.acquire()
+        global inTraffic
+        global outTraffic
+        global inErrors
+        global outErrors
+        global interfaces
+        global session
+
+        if session is not False:
 
             interfaces = []
             # Deve encerrar o loop com algum comando da interface
@@ -170,10 +173,8 @@ def updateVariables():
                     stateString = 'LowerLayerDown'
                 print "Status: " , names[i] , " - " , stateString 
                 interfaces.append({ "name": names[i], "state": stateString })
-            lock.release()
-            time.sleep(1)
-        except:
-            print("alguma treta")
+        lock.release()
+        time.sleep(1)
 
 updateVariablesThread = threading.Thread(target=updateVariables)
 updateVariablesThread.start()
@@ -195,6 +196,7 @@ def Trafego():
 @app.route("/change-params", methods=['POST'])
 @cross_origin(origin='127.0.0.1')
 def ChangeParams():
+    lock.acquire()
     global session
     req_data = request.get_json()['data']
     host = req_data['host']
@@ -207,8 +209,12 @@ def ChangeParams():
     privacyPass = req_data['privacyPass']
 
     print("SET", host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
-    lock.acquire()
-    session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
+    try:
+
+        session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
+    except:
+        print("ERROR - SNMP error:")
+        session = False
     lock.release()
 
     return { "ok": True }
