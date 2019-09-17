@@ -110,66 +110,70 @@ interfaces = []
 def updateVariables():
 
     while (True):
-        
-        global inTraffic
-        global outTraffic
-        global inErrors
-        global outErrors
-        global interfaces
-        lock.acquire()
-        interfaces = []
-        # Deve encerrar o loop com algum comando da interface
+        try:
+            lock.acquire()
+            global inTraffic
+            global outTraffic
+            global inErrors
+            global outErrors
+            global interfaces
+            global session
 
-        # Le numero de interfaces ativas
-        nInterfaces = getInterfacesNumber(session)
-        # Le trafego geral de entrada e saida
-        traffic = getTraffic(session, nInterfaces)
-        #Calcula trafego tido nos 5 segundos
-        inTraffic = traffic[0] - inTraffic
-        outTraffic = traffic[1] - outTraffic
-        if inTraffic < 0:
-            inTraffic = inTraffic*(-1)
-        if outTraffic < 0:
-            outTraffic = outTraffic*(-1)
-        inTraffic = inTraffic/5
-        outTraffic = outTraffic/5
-        print "Trafego de entrada: " , inTraffic , " bytes/s"
-        print "Trafego de saida: " , outTraffic , " bytes/s"
-        # Emite alerta de trafego acima do definido
-        if inTraffic > maxTraffic:
-            print "->Trafego execido na entrada!"
-        if outTraffic > maxTraffic:
-            print "->Trafego execido na saida!"
-        # Le erros em geral de entrada e saida
-        errors = getErrors(session, nInterfaces)
-        inErrors = errors[0]
-        outErrors = errors[1]
-        print "Erros na entrada: " , inErrors
-        print "Erros na saida: " , outErrors
-        # Le os estados das interfaces de rede e seus nomes
-        states = getInterfacesState(session, nInterfaces)
-        names = getInterfacesName(session,nInterfaces)
-        for i in range(len(states)):
-            state = states[i]
-            stateString = ''
-            if state == 1:
-                stateString = 'Up'
-            elif state == 2:
-                stateString = 'Down'
-            elif state == 3:
-                stateString = 'Testing'
-            elif state == 4:
-                stateString = 'Unknow'
-            elif state == 5:
-                stateString = 'Dormant'
-            elif state == 6:
-                stateString = 'NotPresent'
-            elif state == 7:
-                stateString = 'LowerLayerDown'
-            print "Status: " , names[i] , " - " , stateString 
-            interfaces.append({ "name": names[i], "state": stateString })
-        lock.release()
-        time.sleep(1)
+            interfaces = []
+            # Deve encerrar o loop com algum comando da interface
+
+            # Le numero de interfaces ativas
+            nInterfaces = getInterfacesNumber(session)
+            # Le trafego geral de entrada e saida
+            traffic = getTraffic(session, nInterfaces)
+            #Calcula trafego tido nos 5 segundos
+            inTraffic = traffic[0] - inTraffic
+            outTraffic = traffic[1] - outTraffic
+            if inTraffic < 0:
+                inTraffic = inTraffic*(-1)
+            if outTraffic < 0:
+                outTraffic = outTraffic*(-1)
+            inTraffic = inTraffic/5
+            outTraffic = outTraffic/5
+            print "Trafego de entrada: " , inTraffic , " bytes/s"
+            print "Trafego de saida: " , outTraffic , " bytes/s"
+            # Emite alerta de trafego acima do definido
+            if inTraffic > maxTraffic:
+                print "->Trafego execido na entrada!"
+            if outTraffic > maxTraffic:
+                print "->Trafego execido na saida!"
+            # Le erros em geral de entrada e saida
+            errors = getErrors(session, nInterfaces)
+            inErrors = errors[0]
+            outErrors = errors[1]
+            print "Erros na entrada: " , inErrors
+            print "Erros na saida: " , outErrors
+            # Le os estados das interfaces de rede e seus nomes
+            states = getInterfacesState(session, nInterfaces)
+            names = getInterfacesName(session,nInterfaces)
+            for i in range(len(states)):
+                state = states[i]
+                stateString = ''
+                if state == 1:
+                    stateString = 'Up'
+                elif state == 2:
+                    stateString = 'Down'
+                elif state == 3:
+                    stateString = 'Testing'
+                elif state == 4:
+                    stateString = 'Unknow'
+                elif state == 5:
+                    stateString = 'Dormant'
+                elif state == 6:
+                    stateString = 'NotPresent'
+                elif state == 7:
+                    stateString = 'LowerLayerDown'
+                print "Status: " , names[i] , " - " , stateString 
+                interfaces.append({ "name": names[i], "state": stateString })
+            lock.release()
+            time.sleep(1)
+        except:
+            print("alguma treta")
 
 updateVariablesThread = threading.Thread(target=updateVariables)
 updateVariablesThread.start()
@@ -187,6 +191,29 @@ def Trafego():
     global outErrors
     global interfaces
     return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
+
+@app.route("/change-params", methods=['POST'])
+@cross_origin(origin='127.0.0.1')
+def ChangeParams():
+    global session
+    req_data = request.get_json()['data']
+    host = req_data['host']
+    commnity = req_data['commnity']
+    snmpUser = req_data['snmpUser']
+    authProtocol = req_data['authProtocol']
+    authPass = req_data['authPass']
+    securityLevel = req_data['securityLevel']
+    privacyProtocol = req_data['privacyProtocol']
+    privacyPass = req_data['privacyPass']
+
+    print("SET", host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
+    lock.acquire()
+    session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
+    lock.release()
+
+    return { "ok": True }
+    # return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
+
 
 app.run(port='5002')
 
