@@ -1,6 +1,9 @@
 from array import *
 from easysnmp import Session
 import time
+from flask import Flask, request
+from flask_restful import Resource, Api
+import threading
 
 # Cria sessao SNMP conforme os dados passados de parametro
 def createSessionV3(hostname, commnity, securityUsername, authProtocol, authPassword, sucurityLevel, privacyProtocol, privacyPass):
@@ -94,58 +97,98 @@ maxTraffic = 5 * pow(10,6) #10^6 eh mega
 session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
 # Devemos inserir um tratamanto de erro para sessao invalida (caso de valores que nao podem ser usados juntos e pah)
 
+
+lock = threading.Lock()
 inTraffic = 0
 outTraffic = 0
 inErrors = 0
 outErrors = 0
-while (True):
-    # Deve encerrar o loop com algum comando da interface
+interfaces = []
 
-    # Le numero de interfaces ativas
-    nInterfaces = getInterfacesNumber(session)
-    # Le trafego geral de entrada e saida
-    traffic = getTraffic(session, nInterfaces)
-    #Calcula trafego tido nos 5 segundos
-    inTraffic = traffic[0] - inTraffic
-    outTraffic = traffic[1] - outTraffic
-    if inTraffic < 0:
-        inTraffic = inTraffic*(-1)
-    if outTraffic < 0:
-        outTraffic = outTraffic*(-1)
-    inTraffic = inTraffic/5
-    outTraffic = outTraffic/5
-    print "Trafego de entrada: " , inTraffic , " bytes/s"
-    print "Trafego de saida: " , outTraffic , " bytes/s"
-    # Emite alerta de trafego acima do definido
-    if inTraffic > maxTraffic:
-        print "->Trafego execido na entrada!"
-    if outTraffic > maxTraffic:
-        print "->Trafego execido na saida!"
-    # Le erros em geral de entrada e saida
-    errors = getErrors(session, nInterfaces)
-    inErrors = errors[0]
-    outErrors = errors[1]
-    print "Erros na entrada: " , inErrors
-    print "Erros na saida: " , outErrors
-    # Le os estados das interfaces de rede e seus nomes
-    states = getInterfacesState(session, nInterfaces)
-    names = getInterfacesName(session,nInterfaces)
-    for i in range(len(states)):
-        state = states[i]
-        stateString = ''
-        if state == 1:
-            stateString = 'Up'
-        elif state == 2:
-            stateString = 'Down'
-        elif state == 3:
-            stateString = 'Testing'
-        elif state == 4:
-            stateString = 'Unknow'
-        elif state == 5:
-            stateString = 'Dormant'
-        elif state == 6:
-            stateString = 'NotPresent'
-        elif state == 7:
-            stateString = 'LowerLayerDown'
-        print "Status: " , names[i] , " - " , stateString 
-    time.sleep(5)
+
+def updateVariables():
+
+    while (True):
+        
+        global inTraffic
+        global outTraffic
+        global inErrors
+        global outErrors
+        global interfaces
+        lock.acquire()
+        interfaces = []
+        # Deve encerrar o loop com algum comando da interface
+
+        # Le numero de interfaces ativas
+        nInterfaces = getInterfacesNumber(session)
+        # Le trafego geral de entrada e saida
+        traffic = getTraffic(session, nInterfaces)
+        #Calcula trafego tido nos 5 segundos
+        inTraffic = traffic[0] - inTraffic
+        outTraffic = traffic[1] - outTraffic
+        if inTraffic < 0:
+            inTraffic = inTraffic*(-1)
+        if outTraffic < 0:
+            outTraffic = outTraffic*(-1)
+        inTraffic = inTraffic/5
+        outTraffic = outTraffic/5
+        print "Trafego de entrada: " , inTraffic , " bytes/s"
+        print "Trafego de saida: " , outTraffic , " bytes/s"
+        # Emite alerta de trafego acima do definido
+        if inTraffic > maxTraffic:
+            print "->Trafego execido na entrada!"
+        if outTraffic > maxTraffic:
+            print "->Trafego execido na saida!"
+        # Le erros em geral de entrada e saida
+        errors = getErrors(session, nInterfaces)
+        inErrors = errors[0]
+        outErrors = errors[1]
+        print "Erros na entrada: " , inErrors
+        print "Erros na saida: " , outErrors
+        # Le os estados das interfaces de rede e seus nomes
+        states = getInterfacesState(session, nInterfaces)
+        names = getInterfacesName(session,nInterfaces)
+        for i in range(len(states)):
+            state = states[i]
+            stateString = ''
+            if state == 1:
+                stateString = 'Up'
+            elif state == 2:
+                stateString = 'Down'
+            elif state == 3:
+                stateString = 'Testing'
+            elif state == 4:
+                stateString = 'Unknow'
+            elif state == 5:
+                stateString = 'Dormant'
+            elif state == 6:
+                stateString = 'NotPresent'
+            elif state == 7:
+                stateString = 'LowerLayerDown'
+            print "Status: " , names[i] , " - " , stateString 
+            interfaces.append({ "name": names[i], "state": stateString })
+        lock.release()
+        time.sleep(1)
+
+updateVariablesThread = threading.Thread(target=updateVariables)
+updateVariablesThread.start()
+
+app = Flask(__name__)
+api = Api(app)
+
+class Trafego(Resource):
+    def get(self):
+        global inTraffic
+        global outTraffic
+        global inErrors
+        global outErrors
+        global interfaces
+        return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
+
+api.add_resource(Trafego, '/trafego')
+
+
+app.run(port='5002')
+
+
+updateVariablesThread.join()
