@@ -174,7 +174,7 @@ def updateVariables():
                 print "Status: " , names[i] , " - " , stateString 
                 interfaces.append({ "name": names[i], "state": stateString })
         lock.release()
-        time.sleep(1)
+        time.sleep(5)
 
 updateVariablesThread = threading.Thread(target=updateVariables)
 updateVariablesThread.start()
@@ -218,7 +218,6 @@ def ChangeParams():
     lock.release()
 
     return { "ok": True }
-    # return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
 
 
 app.run(port='5002')
