@@ -3,6 +3,7 @@ from easysnmp import Session
 import time
 from flask import Flask, request
 from flask_restful import Resource, Api
+from flask_cors import CORS, cross_origin
 import threading
 
 # Cria sessao SNMP conforme os dados passados de parametro
@@ -174,19 +175,18 @@ updateVariablesThread = threading.Thread(target=updateVariables)
 updateVariablesThread.start()
 
 app = Flask(__name__)
-api = Api(app)
 
-class Trafego(Resource):
-    def get(self):
-        global inTraffic
-        global outTraffic
-        global inErrors
-        global outErrors
-        global interfaces
-        return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
+cors = CORS(app)
 
-api.add_resource(Trafego, '/trafego')
-
+@app.route("/trafego", methods=['GET'])
+@cross_origin(origin='127.0.0.1')
+def Trafego():
+    global inTraffic
+    global outTraffic
+    global inErrors
+    global outErrors
+    global interfaces
+    return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
 
 app.run(port='5002')
 
