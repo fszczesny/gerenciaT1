@@ -12,11 +12,6 @@ def createSessionV3(hostname, commnity, securityUsername, authProtocol, authPass
     session = Session(hostname=hostname, community=commnity, security_username=securityUsername, auth_protocol=authProtocol, auth_password=authPassword, security_level=sucurityLevel, privacy_protocol = privacyProtocol, privacy_password = privacyPass, version=3)
     return session;
 
-def createSessionV2(hostname, commnity):
-    from easysnmp import Session
-    session = Session(hostname=hostname, community=commnity, version=2)
-    return session;
-
 def getInterfacesNumber(session):
     # Faz request para obter o numero de interfaces de rede
     ifNumber = session.get('ifNumber.0')
@@ -83,8 +78,6 @@ def getTraffic(session, nInterfaces):
     traffic.append(outTraffic)
     return traffic
 
-
-# Deve Aguardar um botao de inicio de analise
 # TODO: Le da interface valores
 host = 'localhost'
 commnity = 'public'
@@ -96,8 +89,9 @@ privacyProtocol = 'DEFAULT' # Pode permitir 'DEFAULT', 'DES', 'AES'
 privacyPass = ''
 maxTraffic = 5 * pow(10,6) #10^6 eh mega
 
-# Cria sessao SNMP v3
-session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
+# Cria sessao SNMP v3 sem inicio
+session = False
+
 # Devemos inserir um tratamanto de erro para sessao invalida (caso de valores que nao podem ser usados juntos e pah)
 
 
@@ -121,10 +115,7 @@ def updateVariables():
         global session
 
         if session is not False:
-
             interfaces = []
-            # Deve encerrar o loop com algum comando da interface
-
             # Le numero de interfaces ativas
             nInterfaces = getInterfacesNumber(session)
             # Le trafego geral de entrada e saida

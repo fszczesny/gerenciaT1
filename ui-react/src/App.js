@@ -69,11 +69,11 @@ function App() {
       <div className="entrada-dados-card">
         <Form
           initialValues={{
-            host: "localhost",
-            commnity: "public",
-            snmpUser: "MD5User",
+            host: "",
+            commnity: "",
+            snmpUser: "",
             authProtocol: "MD5",
-            authPass: "The Net-SNMP Demo Password",
+            authPass: "",
             securityLevel: "auth_without_privacy",
             privacyProtocol: "DEFAULT",
             privacyPass: "",
@@ -230,7 +230,7 @@ function App() {
                 name="maxTraffic"
                 render={({ meta, input }) => (
                   <TextField
-                    label="Max Traffic"
+                    label="Max Traffic - bytes/sec"
                     placeholder="bytes/sec"
                     // margin="normal"
                     variant="outlined"
@@ -275,13 +275,13 @@ function App() {
               label="Erros IN"
               margin="normal"
               variant="outlined"
-              value={`In ${inErrors} bytes/s`}
+              value={`In ${inErrors}`}
             />
             <TextField
               label="Erros OUT"
               margin="normal"
               variant="outlined"
-              value={`Out ${outErrors} bytes/s`}
+              value={`Out ${outErrors}`}
             />
           </div>
         </div>
