@@ -43,18 +43,18 @@ def getErrors(session, nInterfaces):
     countBulk = session.get_bulk(['ifInErrors', 'ifOutErrors'], 0, numInterfaces)
     # Define variavel de trafego momentaneo
     errors = []
-    inErrors = 0
-    outErrors = 0
+    inErrors_ = 0
+    outErrors_ = 0
     # Loop pelas interfaces
     for i in range(numInterfaces):
         # Os contadores in/out da interface i estarao na lista um apos o outro (posicoes i e i+1)
         ifInErrors = countBulk[i]
         ifOutErrors = countBulk[i+1]
         # Convertendo os valores para inteiro
-        inErrors = inErrors + int(ifInErrors.value)
-        outErrors = outErrors + int(ifOutErrors.value)
-    errors.append(inErrors)
-    errors.append(outErrors)
+        inErrors_ = inErrors_ + int(ifInErrors.value)
+        outErrors_ = outErrors_ + int(ifOutErrors.value)
+    errors.append(inErrors_)
+    errors.append(outErrors_)
     return errors
 
 # Retorna um vetor de trafego [entrada, saida] em bytes
@@ -64,18 +64,18 @@ def getTraffic(session, nInterfaces):
     countBulk = session.get_bulk(['ifInOctets', 'ifOutOctets'], 0, numInterfaces)
     # Define variavel de trafego momentaneo
     traffic = []
-    inTraffic = 0
-    outTraffic = 0
+    inTraffic_ = 0
+    outTraffic_ = 0
     # Loop pelas interfaces
     for i in range(numInterfaces):
         # Os contadores in/out da interface i estarao na lista um apos o outro (posicoes i e i+1)
         ifInOctets = countBulk[i]
         ifOutOctets = countBulk[i+1]
         # Convertendo os valores para inteiro
-        inTraffic = inTraffic + int(ifInOctets.value)
-        outTraffic = outTraffic + int(ifOutOctets.value)
-    traffic.append(inTraffic)
-    traffic.append(outTraffic)
+        inTraffic_ = inTraffic_ + int(ifInOctets.value)
+        outTraffic_ = outTraffic_ + int(ifOutOctets.value)
+    traffic.append(inTraffic_)
+    traffic.append(outTraffic_)
     return traffic
 
 # TODO: Le da interface valores
@@ -92,12 +92,11 @@ maxTraffic = 5 * pow(10,6) #10^6 eh mega
 # Cria sessao SNMP v3 sem inicio
 session = False
 
-# Devemos inserir um tratamanto de erro para sessao invalida (caso de valores que nao podem ser usados juntos e pah)
-
-
 lock = threading.Lock()
 inTraffic = 0
+lastInOctets = 0
 outTraffic = 0
+lastOutOctets = 0
 inErrors = 0
 outErrors = 0
 interfaces = []
@@ -113,6 +112,8 @@ def updateVariables():
         global outErrors
         global interfaces
         global session
+        global lastInOctets
+        global lastOutOctets
 
         if session is not False:
             interfaces = []
@@ -121,14 +122,15 @@ def updateVariables():
             # Le trafego geral de entrada e saida
             traffic = getTraffic(session, nInterfaces)
             #Calcula trafego tido nos 5 segundos
-            inTraffic = traffic[0] - inTraffic
-            outTraffic = traffic[1] - outTraffic
-            if inTraffic < 0:
-                inTraffic = inTraffic*(-1)
-            if outTraffic < 0:
-                outTraffic = outTraffic*(-1)
-            inTraffic = inTraffic/5
-            outTraffic = outTraffic/5
+            if lastInOctets != 0 and lastOutOctets != 0:
+                inTraffic = int((traffic[0] - lastInOctets)/5)
+                outTraffic = int((traffic[1] - lastOutOctets)/5)
+                if inTraffic < 0:
+                    inTraffic = inTraffic*(-1)
+                if outTraffic < 0:
+                    outTraffic = outTraffic*(-1)
+            lastInOctets = traffic[0]
+            lastOutOctets = traffic[1]
             print "Trafego de entrada: " , inTraffic , " bytes/s"
             print "Trafego de saida: " , outTraffic , " bytes/s"
             # Emite alerta de trafego acima do definido
@@ -201,7 +203,6 @@ def ChangeParams():
 
     print("SET", host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
     try:
-
         session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
     except:
         print("ERROR - SNMP error:")
