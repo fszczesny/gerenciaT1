@@ -100,7 +100,8 @@ lastOutOctets = 0
 inErrors = 0
 outErrors = 0
 interfaces = []
-
+maxTrafficBoolIn = False
+maxTrafficBoolOut = False
 
 def updateVariables():
 
@@ -114,6 +115,9 @@ def updateVariables():
         global session
         global lastInOctets
         global lastOutOctets
+        global maxTrafficBoolIn
+        global maxTrafficBoolOut
+        global maxTraffic
 
         if session is not False:
             interfaces = []
@@ -134,10 +138,17 @@ def updateVariables():
             print "Trafego de entrada: " , inTraffic , " bytes/s"
             print "Trafego de saida: " , outTraffic , " bytes/s"
             # Emite alerta de trafego acima do definido
+            print "--> MaxTraffic: ", maxTraffic
             if inTraffic > maxTraffic:
+                maxTrafficBoolIn = True
                 print "->Trafego execido na entrada!"
+            else:
+                maxTrafficBoolIn = False
             if outTraffic > maxTraffic:
+                maxTrafficBoolOut = True
                 print "->Trafego execido na saida!"
+            else:
+                maxTrafficBoolOut = False
             # Le erros em geral de entrada e saida
             errors = getErrors(session, nInterfaces)
             inErrors = errors[0]
@@ -184,13 +195,17 @@ def Trafego():
     global inErrors
     global outErrors
     global interfaces
-    return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces }
+    global maxTrafficBoolIn
+    global maxTrafficBoolOut
+    return {'trafego-entrada':  inTraffic, 'trafego-saida': outTraffic, 'erros-entrada': inErrors, 'errors-saida': outErrors, "interfaces": interfaces, 'maxTrafficBoolIn' :  maxTrafficBoolIn, 'maxTrafficBoolOut' :  maxTrafficBoolOut}
 
 @app.route("/change-params", methods=['POST'])
 @cross_origin(origin='127.0.0.1')
 def ChangeParams():
     lock.acquire()
     global session
+    global maxTraffic
+
     req_data = request.get_json()['data']
     host = req_data['host']
     commnity = req_data['commnity']
@@ -201,11 +216,13 @@ def ChangeParams():
     privacyProtocol = req_data['privacyProtocol']
     privacyPass = req_data['privacyPass']
 
+    maxTraffic = int(req_data['maxTraffic'])
     print("SET", host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
     try:
         session = createSessionV3(host, commnity, snmpUser, authProtocol, authPass, securityLevel, privacyProtocol, privacyPass)
-    except:
+    except Exception as excp:
         print("ERROR - SNMP error:")
+        print(excp)
         session = False
     lock.release()
 

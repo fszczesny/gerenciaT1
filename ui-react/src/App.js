@@ -20,7 +20,8 @@ function App() {
   const [inErrors, setInErrors] = useState(0);
   const [outErrors, setOutErrors] = useState(0);
   const [interfaces, setInterfaces] = useState([]);
-
+  const [maxIn, setMaxIn] = useState(false);
+  const [maxOut, setMaxOut] = useState(false);
   const setVariables = async newVariables => {
     const response = await axios.post("http://127.0.0.1:5002/change-params", {
       method: "POST",
@@ -53,6 +54,8 @@ function App() {
       setInErrors(response.data["erros-entrada"]);
       setOutErrors(response.data["errors-saida"]);
       setInterfaces(response.data["interfaces"]);
+      setMaxIn(response.data["maxTrafficBoolIn"]);
+      setMaxOut(response.data["maxTrafficBoolOut"]);
     } catch (err) {
       console.warn("ERROR:", err);
     }
@@ -259,12 +262,15 @@ function App() {
               label="Traffic IN"
               margin="normal"
               variant="outlined"
+              error={maxIn}
               value={`${inTraffic} bytes/s`}
+
             />
             <TextField
               label="Traffic OUT"
               margin="normal"
               variant="outlined"
+              error={maxOut}
               value={`${outTrafic} bytes/s`}
             />
           </div>
